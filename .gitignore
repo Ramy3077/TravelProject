@@ -1,6 +1,8 @@
+TASKS.md
+AGENTS.MD
 node_modules/
 .DS_Store
 target/
 build/
 .env
-AGENTS.MD
+

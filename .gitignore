@@ -5,4 +5,4 @@ node_modules/
 target/
 build/
 .env
-
+.vscode

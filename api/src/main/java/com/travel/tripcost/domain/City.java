@@ -29,4 +29,7 @@ public class City {
     private Double latitude;
     private Double longitude;
 
+    @OneToOne(mappedBy = "city", cascade = CascadeType.ALL)
+    private CostIndex costIndex;
+
 }

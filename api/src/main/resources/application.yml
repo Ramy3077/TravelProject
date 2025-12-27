@@ -15,3 +15,12 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+management:
+  endpoints:
+    web:
+      base-path: /api
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always

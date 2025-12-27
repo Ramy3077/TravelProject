@@ -28,8 +28,7 @@ load_dotenv('../.env')
 
 def get_connection():
     host = os.getenv("DB_HOST", "localhost")
-    if host == "db":
-        host = "localhost"
+    # if host == "db": ... removed incorrect override
     return psycopg2.connect(
         host=host,
         port=os.getenv("DB_PORT", "5432"),

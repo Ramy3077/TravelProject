@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 
 @Entity
@@ -22,6 +23,7 @@ public class CostIndex {
     @OneToOne
     @MapsId
     @JoinColumn(name = "city_id")
+    @JsonIgnore
     private City city;
 
     @Column(name = "accommodation_low")

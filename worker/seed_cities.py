@@ -10,8 +10,7 @@ load_dotenv('../.env')
 def get_connection():
     # Helper to resolve host (use localhost if running outside Docker)
     host = os.getenv("DB_HOST", "localhost")
-    if host == "db": # Common override for local dev outside container
-        host = "localhost"
+    # if host == "db": ... removed incorrect override logic, trusting env var
         
     return psycopg2.connect(
         host=host,

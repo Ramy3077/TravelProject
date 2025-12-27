@@ -19,7 +19,23 @@ Provide travelers with a realistic view of their journey beyond just the flight 
 - **Database**: PostgreSQL - For caching and reference datasets.
 - **Infrastructure**: Dockerized services for consistent development and deployment.
 
-## 🛡 Design Philosophy
+## � Data Setup
+This project requires external datasets for city geographic data and cost indices. Due to size and licensing, these are excluded from version control.
+
+### Sourcing the Data
+1. **Cities**: Download from [SimpleMaps (World Cities Database)](https://simplemaps.com/data/world-cities) - *Basic (Free) Plan*. Save as `worker/data/worldcities.csv`.
+2. **Cost Indices**: Download from [Kaggle (Global Cost of Living)](https://www.kaggle.com/datasets/mvieira101/global-cost-of-living/data?select=cost-of-living_v2.csv). Save as `worker/data/cost-of-living_v2.csv`.
+
+### Seeding the Database
+Ensure your `.env` is configured, then run:
+```bash
+cd worker
+pip install -r requirements.txt
+python seed_cities.py  # Tier 1: 48k Cities
+python seed_costs.py   # Tier 2: Cost Indices for ~2.7k cities
+```
+
+## �🛡 Design Philosophy
 1. **Truthfulness First**: Every number is an estimate with an explicit range and confidence badge.
 2. **Graceful Degradation**: External API failures shift the report to "Lower Confidence" but never result in a blank screen.
 3. **Privacy**: No login required for v1; reports are immutable tokens.

@@ -14,7 +14,7 @@ public class FoodEstimator {
     private final CostIndexRepository costIndexRepository;
 
     public CostRange estimate(String destCityId, int days, int travellers) {
-        CostIndex costs = costIndexRepository.findById(destCityId)
+        CostIndex costs = costIndexRepository.findById(java.util.Objects.requireNonNull(destCityId))
                 .orElse(getFallbackCosts());
 
         BigDecimal dailyFood = costs.getFoodDaily();

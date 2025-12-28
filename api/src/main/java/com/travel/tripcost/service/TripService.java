@@ -27,9 +27,9 @@ public class TripService {
     public TripResponse estimateTrip(TripRequest request) {
 
         // 1. Fetch Cities
-        City origin = cityRepository.findById(request.getOriginCityId())
+        City origin = cityRepository.findById(java.util.Objects.requireNonNull(request.getOriginCityId()))
                 .orElseThrow(() -> new IllegalArgumentException("Invalid Origin City ID"));
-        City dest = cityRepository.findById(request.getDestinationCityId())
+        City dest = cityRepository.findById(java.util.Objects.requireNonNull(request.getDestinationCityId()))
                 .orElseThrow(() -> new IllegalArgumentException("Invalid Destination City ID"));
 
         // 2. Core Calculations

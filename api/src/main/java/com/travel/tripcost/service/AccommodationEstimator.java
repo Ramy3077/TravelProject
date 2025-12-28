@@ -15,7 +15,7 @@ public class AccommodationEstimator {
 
     public CostRange estimate(String destCityId, int nights, String preference) {
         // Fetch costs or use Fallback defaults if global data is missing
-        CostIndex costs = costIndexRepository.findById(destCityId)
+        CostIndex costs = costIndexRepository.findById(java.util.Objects.requireNonNull(destCityId))
                 .orElse(getFallbackCosts());
 
         BigDecimal dailyRate = preference.equals("CHEAP")

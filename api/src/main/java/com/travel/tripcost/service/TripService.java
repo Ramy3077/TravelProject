@@ -10,77 +10,89 @@ import com.travel.tripcost.domain.City;
 import com.travel.tripcost.dto.TripRequest;
 import com.travel.tripcost.dto.TripResponse;
 import com.travel.tripcost.dto.TripResponse.CostRange;
+import com.travel.tripcost.provider.FlightProvider;
 import com.travel.tripcost.repository.CityRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @Service
 @RequiredArgsConstructor
 public class TripService {
 
-    private final CityRepository cityRepository;
-    private final DistanceService distanceService;
-    private final TransportEstimator transportEstimator;
-    private final AccommodationEstimator accommodationEstimator;
-    private final FoodEstimator foodEstimator;
+        private final CityRepository cityRepository;
+        private final DistanceService distanceService;
 
-    public TripResponse estimateTrip(TripRequest request) {
+        @Qualifier("realFlightProvider")
+        private final FlightProvider flightProvider;
 
-        // 1. Fetch Cities
-        City origin = cityRepository.findById(java.util.Objects.requireNonNull(request.getOriginCityId()))
-                .orElseThrow(() -> new IllegalArgumentException("Invalid Origin City ID"));
-        City dest = cityRepository.findById(java.util.Objects.requireNonNull(request.getDestinationCityId()))
-                .orElseThrow(() -> new IllegalArgumentException("Invalid Destination City ID"));
+        private final AccommodationEstimator accommodationEstimator;
+        private final FoodEstimator foodEstimator;
 
-        // 2. Core Calculations
-        double distanceKm = distanceService.calculateDistanceKm(
-                origin.getLatitude(), origin.getLongitude(),
-                dest.getLatitude(), dest.getLongitude());
+        public TripResponse estimateTrip(TripRequest request) {
 
-        int nights = (int) ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
-        int days = nights + 1;
+                // 1. Fetch Cities
+                City origin = cityRepository.findById(java.util.Objects.requireNonNull(request.getOriginCityId()))
+                                .orElseThrow(() -> new IllegalArgumentException("Invalid Origin City ID"));
+                City dest = cityRepository.findById(java.util.Objects.requireNonNull(request.getDestinationCityId()))
+                                .orElseThrow(() -> new IllegalArgumentException("Invalid Destination City ID"));
 
-        // 3. Get Estimates
-        // Transport
-        double[] transportPrices = transportEstimator.costRange(distanceKm, request.getTravellers(),
-                request.getPreference());
-        CostRange transportCost = new CostRange();
-        transportCost.setMin(BigDecimal.valueOf(transportPrices[0]));
-        transportCost.setMax(BigDecimal.valueOf(transportPrices[1]));
-        transportCost.setConfidence("LOW");
+                // 2. Core Calculations
+                double distanceKm = distanceService.calculateDistanceKm(
+                                origin.getLatitude(), origin.getLongitude(),
+                                dest.getLatitude(), dest.getLongitude());
 
-        // Accommodation
-        CostRange accommodationCost = accommodationEstimator.estimate(dest.getId(), nights, request.getPreference());
+                int nights = (int) ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
+                int days = nights + 1;
 
-        // Food
-        CostRange foodCost = foodEstimator.estimate(dest.getId(), days, request.getTravellers());
+                // 3. Get Estimates
+                // Transport (using FlightProvider with Circuit Breaker)
+                // Use IATA codes from database (populated by worker/seed_cities.py)
+                // Fallback to extraction if DB IATA code is missing (safety check)
+                String originIata = origin.getIataCode() != null ? origin.getIataCode() : origin.getId().split("_")[1];
+                String destIata = dest.getIataCode() != null ? dest.getIataCode() : dest.getId().split("_")[1];
 
-        // 4. Calculate Total
-        BigDecimal totalMin = transportCost.getMin().add(accommodationCost.getMin()).add(foodCost.getMin());
-        BigDecimal totalMax = transportCost.getMax().add(accommodationCost.getMax()).add(foodCost.getMax());
+                CostRange transportCost = flightProvider.getFlightQuote(
+                                originIata,
+                                destIata,
+                                request.getStartDate().toString(),
+                                request.getEndDate().toString(),
+                                request.getTravellers(),
+                                request.getPreference());
 
-        CostRange totalCost = new CostRange();
-        totalCost.setMin(totalMin);
-        totalCost.setMax(totalMax);
-        totalCost.setConfidence("MEDIUM");
+                // Accommodation
+                CostRange accommodationCost = accommodationEstimator.estimate(dest.getId(), nights,
+                                request.getPreference());
 
-        // 5. Build Response
-        TripResponse response = new TripResponse();
+                // Food
+                CostRange foodCost = foodEstimator.estimate(dest.getId(), days, request.getTravellers());
 
-        TripResponse.Breakdown breakdown = new TripResponse.Breakdown();
-        breakdown.setTransport(transportCost);
-        breakdown.setAccommodation(accommodationCost);
-        breakdown.setFood(foodCost);
-        breakdown.setTotal(totalCost);
-        response.setBreakdown(breakdown);
+                // 4. Calculate Total
+                BigDecimal totalMin = transportCost.getMin().add(accommodationCost.getMin()).add(foodCost.getMin());
+                BigDecimal totalMax = transportCost.getMax().add(accommodationCost.getMax()).add(foodCost.getMax());
 
-        TripResponse.Metadata metadata = new TripResponse.Metadata();
-        metadata.setDataSource("Fallback Engine");
-        metadata.setGeneratedAt(java.time.Instant.now().toString());
-        response.setMetadata(metadata);
+                CostRange totalCost = new CostRange();
+                totalCost.setMin(totalMin);
+                totalCost.setMax(totalMax);
+                totalCost.setConfidence("MEDIUM");
 
-        response.setAlternatives(List.of());
+                // 5. Build Response
+                TripResponse response = new TripResponse();
 
-        return response;
-    }
+                TripResponse.Breakdown breakdown = new TripResponse.Breakdown();
+                breakdown.setTransport(transportCost);
+                breakdown.setAccommodation(accommodationCost);
+                breakdown.setFood(foodCost);
+                breakdown.setTotal(totalCost);
+                response.setBreakdown(breakdown);
+
+                TripResponse.Metadata metadata = new TripResponse.Metadata();
+                metadata.setDataSource("Fallback Engine");
+                metadata.setGeneratedAt(java.time.Instant.now().toString());
+                response.setMetadata(metadata);
+
+                response.setAlternatives(List.of());
+
+                return response;
+        }
 }

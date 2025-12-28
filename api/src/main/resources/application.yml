@@ -15,12 +15,32 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+
+# Amadeus External API
+amadeus:
+  api:
+    url: ${AMADEUS_API_URL:https://test.api.amadeus.com}
+  client:
+    id: ${AMADEUS_CLIENT_ID}
+    secret: ${AMADEUS_CLIENT_SECRET}
+
 management:
   endpoints:
     web:
-      base-path: /api
       exposure:
-        include: health,mappings
+        include: health,mappings,circuitbreakers
   endpoint:
     health:
       show-details: always
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      flightApi:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 3
+        minimumNumberOfCalls: 5
+  

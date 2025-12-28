@@ -25,6 +25,7 @@ This project requires external datasets for city geographic data and cost indice
 ### Sourcing the Data
 1. **Cities**: Download from [SimpleMaps (World Cities Database)](https://simplemaps.com/data/world-cities) - *Basic (Free) Plan*. Save as `worker/data/worldcities.csv`.
 2. **Cost Indices**: Download from [Kaggle (Global Cost of Living)](https://www.kaggle.com/datasets/mvieira101/global-cost-of-living/data?select=cost-of-living_v2.csv). Save as `worker/data/cost-of-living_v2.csv`.
+3. **Airports**: Download from [GitHub (lxndrblz/Airports)](https://github.com/lxndrblz/Airports/blob/main/airports.csv). Save as `worker/data/airports.csv`.
 
 ### Seeding the Database
 Ensure your `.env` is configured, then run:

@@ -1,7 +1,19 @@
 // API Client for Trip Cost Estimator
 // Connects to Spring Boot backend on localhost:8080
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// In development, if we are accessing via IP (like on a phone), 
+// we want to point to the backend on that same IP.
+const getApiBase = () => {
+    if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== 'undefined') {
+        return `http://${window.location.hostname}:8080`;
+    }
+    return 'http://localhost:8080';
+};
+
+const API_BASE = getApiBase();
 
 // Types matching our backend DTOs
 export interface City {

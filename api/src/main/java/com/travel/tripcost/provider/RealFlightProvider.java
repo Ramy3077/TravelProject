@@ -33,7 +33,7 @@ public class RealFlightProvider implements FlightProvider {
     @CircuitBreaker(name = "flightApi", fallbackMethod = "fallbackQuote")
     public CostRange getFlightQuote(String originIata, String destIata,
             String startDate, String endDate,
-            int travelers, String preference) {
+            int travelers, String preference, double distanceKm) {
         log.info("Fetching live flight offers from Amadeus for {} -> {} ({} travelers, {} - {})", originIata,
                 destIata, travelers, startDate, endDate);
 
@@ -72,10 +72,11 @@ public class RealFlightProvider implements FlightProvider {
 
     public CostRange fallbackQuote(String originIata, String destIata,
             String startDate, String endDate,
-            int travelers, String preference,
+            int travelers, String preference, double distanceKm,
             Throwable t) {
         log.warn("Circuit breaker fallback triggered: {}", t.getMessage());
-        return fallbackProvider.getFlightQuote(originIata, destIata, startDate, endDate, travelers, preference);
+        return fallbackProvider.getFlightQuote(originIata, destIata, startDate, endDate, travelers, preference,
+                distanceKm);
     }
 
     private String mapPreferenceToTravelClass(String preference) {

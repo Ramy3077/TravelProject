@@ -40,8 +40,12 @@ public class AmadeusApiClient {
         return execute(enriched, true);
     }
 
+    @SuppressWarnings("null")
     private FlightOfferResponse execute(FlightOfferRequest request, boolean allowRetry) {
         String accessToken = tokenService.getAccessToken();
+        if (accessToken == null) {
+            throw new IllegalStateException("Failed to obtain access token from Amadeus");
+        }
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));

@@ -42,13 +42,13 @@ public class TripService {
                 City dest = cityRepository.findById(java.util.Objects.requireNonNull(request.getDestinationCityId()))
                                 .orElseThrow(() -> new IllegalArgumentException("Invalid Destination City ID"));
 
+                int nights = (int) ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
+                int days = nights + 1;
+
                 // 2. Core Calculations
                 double distanceKm = distanceService.calculateDistanceKm(
                                 origin.getLatitude(), origin.getLongitude(),
                                 dest.getLatitude(), dest.getLongitude());
-
-                int nights = (int) ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
-                int days = nights + 1;
 
                 // 3. Get Estimates
                 // Transport (using FlightProvider with Circuit Breaker)
@@ -69,7 +69,8 @@ public class TripService {
                                         request.getStartDate().toString(),
                                         request.getEndDate().toString(),
                                         request.getTravellers(),
-                                        request.getPreference());
+                                        request.getPreference(),
+                                        distanceKm);
                 } else {
                         // Fallback to mock provider for cities without IATA codes
                         log.warn("Missing IATA codes - Origin: {} ({}), Dest: {} ({}). Using fallback estimator.",
@@ -77,12 +78,13 @@ public class TripService {
                                         dest.getName(), dest.getIataCode());
 
                         transportCost = mockFlightProvider.getFlightQuote(
-                                        origin.getId(), // Mock provider uses city IDs, not IATA
-                                        dest.getId(),
+                                        origin.getId().toString(), // Mock provider uses city IDs, not IATA
+                                        dest.getId().toString(),
                                         request.getStartDate().toString(),
                                         request.getEndDate().toString(),
                                         request.getTravellers(),
-                                        request.getPreference());
+                                        request.getPreference(),
+                                        distanceKm);
                 }
 
                 // Accommodation

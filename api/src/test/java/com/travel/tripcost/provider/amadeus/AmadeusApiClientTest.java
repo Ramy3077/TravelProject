@@ -19,11 +19,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.web.client.ExpectedCount;
+
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
 @SpringBootTest(classes = { AmadeusApiClient.class, AmadeusTokenService.class, RestTemplateConfig.class })
+@SuppressWarnings("null")
 @TestPropertySource(properties = {
         "amadeus.client.id=testId",
         "amadeus.client.secret=testSecret",

@@ -1,5 +1,6 @@
 package com.travel.tripcost.controller;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +26,7 @@ public class LocationController {
         if (query == null || query.length() < 2) {
             return List.of();
         }
-        return cityRepository.findByNameContainingIgnoreCase(query);
+        return cityRepository.findByNameContainingIgnoreCase(query, PageRequest.of(0, 10));
     }
 
 }

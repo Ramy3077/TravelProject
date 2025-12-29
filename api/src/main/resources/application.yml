@@ -21,12 +21,16 @@ amadeus:
   api:
     url: ${AMADEUS_API_URL:https://test.api.amadeus.com}
   client:
-    id: ${AMADEUS_CLIENT_ID}
-    secret: ${AMADEUS_CLIENT_SECRET}
+    id: ${AMADEUS_CLIENT_ID:}
+    secret: ${AMADEUS_CLIENT_SECRET:}
+  default:
+    currency: ${AMADEUS_CURRENCY:USD}
+    max: ${AMADEUS_MAX:5}
 
 management:
   endpoints:
     web:
+      base-path: /api
       exposure:
         include: health,mappings,circuitbreakers
   endpoint:

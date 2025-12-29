@@ -23,10 +23,10 @@ public class AmadeusTokenService {
     @Value("${amadeus.api.url:https://test.api.amadeus.com}")
     private String apiUrl;
 
-    @Value("${amadeus.client.id}")
+    @Value("${amadeus.client.id:}")
     private String clientId;
 
-    @Value("${amadeus.client.secret}")
+    @Value("${amadeus.client.secret:}")
     private String clientSecret;
 
     // Token cache
@@ -55,6 +55,7 @@ public class AmadeusTokenService {
     }
 
     private String fetchNewToken() {
+        ensureCredentialsPresent();
         String tokenUrl = apiUrl + "/v1/security/oauth2/token";
 
         HttpHeaders headers = new HttpHeaders();
@@ -97,6 +98,13 @@ public class AmadeusTokenService {
         log.info("Invalidating cached Amadeus token");
         cachedToken = null;
         tokenExpiry = null;
+    }
+
+    private void ensureCredentialsPresent() {
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+            throw new IllegalStateException(
+                    "Amadeus credentials are missing. Please set amadeus.client.id and amadeus.client.secret (env: AMADEUS_CLIENT_ID/AMADEUS_CLIENT_SECRET).");
+        }
     }
 
     // DTO for token response (fields must match JSON keys)

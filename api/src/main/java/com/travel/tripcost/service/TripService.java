@@ -14,8 +14,10 @@ import com.travel.tripcost.provider.FlightProvider;
 import com.travel.tripcost.repository.CityRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TripService {
@@ -25,6 +27,9 @@ public class TripService {
 
         @Qualifier("realFlightProvider")
         private final FlightProvider flightProvider;
+
+        @Qualifier("mockFlightProvider")
+        private final FlightProvider mockFlightProvider;
 
         private final AccommodationEstimator accommodationEstimator;
         private final FoodEstimator foodEstimator;
@@ -47,18 +52,38 @@ public class TripService {
 
                 // 3. Get Estimates
                 // Transport (using FlightProvider with Circuit Breaker)
-                // Use IATA codes from database (populated by worker/seed_cities.py)
-                // Fallback to extraction if DB IATA code is missing (safety check)
-                String originIata = origin.getIataCode() != null ? origin.getIataCode() : origin.getId().split("_")[1];
-                String destIata = dest.getIataCode() != null ? dest.getIataCode() : dest.getId().split("_")[1];
+                // IATA codes are populated from external database (worker/seed_cities.py)
+                // If IATA codes are missing, fall back to MockFlightProvider
 
-                CostRange transportCost = flightProvider.getFlightQuote(
-                                originIata,
-                                destIata,
-                                request.getStartDate().toString(),
-                                request.getEndDate().toString(),
-                                request.getTravellers(),
-                                request.getPreference());
+                boolean hasIataCodes = hasIataCode(origin) && hasIataCode(dest);
+                CostRange transportCost;
+
+                if (hasIataCodes) {
+                        // Use real Amadeus API with IATA codes
+                        String originIata = origin.getIataCode();
+                        String destIata = dest.getIataCode();
+
+                        transportCost = flightProvider.getFlightQuote(
+                                        originIata,
+                                        destIata,
+                                        request.getStartDate().toString(),
+                                        request.getEndDate().toString(),
+                                        request.getTravellers(),
+                                        request.getPreference());
+                } else {
+                        // Fallback to mock provider for cities without IATA codes
+                        log.warn("Missing IATA codes - Origin: {} ({}), Dest: {} ({}). Using fallback estimator.",
+                                        origin.getName(), origin.getIataCode(),
+                                        dest.getName(), dest.getIataCode());
+
+                        transportCost = mockFlightProvider.getFlightQuote(
+                                        origin.getId(), // Mock provider uses city IDs, not IATA
+                                        dest.getId(),
+                                        request.getStartDate().toString(),
+                                        request.getEndDate().toString(),
+                                        request.getTravellers(),
+                                        request.getPreference());
+                }
 
                 // Accommodation
                 CostRange accommodationCost = accommodationEstimator.estimate(dest.getId(), nights,
@@ -87,12 +112,17 @@ public class TripService {
                 response.setBreakdown(breakdown);
 
                 TripResponse.Metadata metadata = new TripResponse.Metadata();
-                metadata.setDataSource("Fallback Engine");
+                metadata.setDataSource("HIGH".equalsIgnoreCase(transportCost.getConfidence()) ? "Amadeus Live"
+                                : "Fallback Engine");
                 metadata.setGeneratedAt(java.time.Instant.now().toString());
                 response.setMetadata(metadata);
 
                 response.setAlternatives(List.of());
 
                 return response;
+        }
+
+        private boolean hasIataCode(City city) {
+                return city.getIataCode() != null && !city.getIataCode().isBlank();
         }
 }

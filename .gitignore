@@ -6,7 +6,7 @@ target/
 build/
 .env
 .vscode
-.agent
+
 # Worker Data
 worker/data/*.csv
 build_debug.log

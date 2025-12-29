@@ -1,6 +1,5 @@
 package com.travel.tripcost.provider.amadeus;
 
-import com.travel.tripcost.provider.AmadeusTokenService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

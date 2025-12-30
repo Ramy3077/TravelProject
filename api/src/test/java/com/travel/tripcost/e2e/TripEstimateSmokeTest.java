@@ -42,6 +42,7 @@ class TripEstimateSmokeTest {
     @Autowired
     private CityRepository cityRepository;
 
+    @SuppressWarnings("unused")
     @Autowired
     private CostIndexRepository costIndexRepository;
 

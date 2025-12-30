@@ -24,11 +24,13 @@ public class AccommodationEstimator {
 
         BigDecimal total = dailyRate.multiply(BigDecimal.valueOf(nights));
 
-        // For Phase 2, Min = Max since we have specific data points
-        // Confidence is HIGH if data exists, LOW if fallback
+        // Apply buffer: 0.8x for budget, 1.3x for splurge
+        BigDecimal minTotal = total.multiply(new BigDecimal("0.8"));
+        BigDecimal maxTotal = total.multiply(new BigDecimal("1.3"));
+
         CostRange range = new CostRange();
-        range.setMin(total);
-        range.setMax(total);
+        range.setMin(minTotal.setScale(2, java.math.RoundingMode.HALF_UP));
+        range.setMax(maxTotal.setScale(2, java.math.RoundingMode.HALF_UP));
         range.setConfidence(costs.getCityId() == null ? "LOW" : "HIGH");
 
         return range;

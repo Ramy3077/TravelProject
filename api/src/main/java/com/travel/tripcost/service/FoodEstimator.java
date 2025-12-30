@@ -22,9 +22,13 @@ public class FoodEstimator {
         BigDecimal total = dailyFood.multiply(BigDecimal.valueOf(days))
                 .multiply(BigDecimal.valueOf(travellers));
 
+        // Apply buffer: 0.8x for budget, 1.3x for splurge
+        BigDecimal minTotal = total.multiply(new BigDecimal("0.8"));
+        BigDecimal maxTotal = total.multiply(new BigDecimal("1.3"));
+
         CostRange range = new CostRange();
-        range.setMin(total);
-        range.setMax(total);
+        range.setMin(minTotal.setScale(2, java.math.RoundingMode.HALF_UP));
+        range.setMax(maxTotal.setScale(2, java.math.RoundingMode.HALF_UP));
         range.setConfidence(costs.getCityId() == null ? "LOW" : "HIGH");
 
         return range;

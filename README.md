@@ -1,45 +1,84 @@
 # Trip Cost & Time Decomposer (“Why does this trip cost so much?”)
 
-A transparent, cached, and explainable travel estimation engine that breaks down the true cost and time of your trip.
+> **🚀 Status: v0.9 Public Beta**
+>
+> *Authentication-free, privacy-first trip estimation focused on transparency and resilience.*
 
-## 🚀 Mission
-Provide travelers with a realistic view of their journey beyond just the flight price. Most trip planners hide uncertainty; we embrace it by using ranges, confidence levels, and explicit assumptions.
+A travel estimation engine that breaks down the *true* cost and time of your trip. Unlike standard booking sites, we show you the uncertainty, explicit assumptions, and what happens when you fly vs. take a train.
 
-## ✨ Core Features
-- **Total Trip Cost Breakdown**: Ranges for transport, mid-range accommodation, food, and local transit.
-- **Door-to-Door Time Breakdown**: Estimates for airport buffers, flight time, and transfers.
-- **Cheaper Alternatives**: Intelligent date-shift suggestions (±1-3 days) with explained trade-offs.
-- **Resilient Estimates**: Always produces a report, even when external APIs are down, using a high-quality internal fallback engine.
-- **Shareable Reports**: Immutable, no-login-required links to share trip estimates with others.
+## ✨ Features (v0.9)
 
-## 🛠 Tech Stack
-- **Backend**: Spring Boot (Java) - Core logic, API, and provider integration.
-- **Frontend**: Next.js (TypeScript) - Premium, interactive dashboard.
-- **Worker**: Python - ETL and data seeding for city indices.
-- **Database**: PostgreSQL - For caching and reference datasets.
-- **Infrastructure**: Dockerized services for consistent development and deployment.
+### ✅ implemented & Working
+*   **Hybrid Estimation Engine**:
+    *   **Primary**: Fetches live flight quotes via **Amadeus API**.
+    *   **Fallback**: If APIs fail (or for cities with no airports), instantly switches to a robust internal calculation engine based on geodesic distance and regional multipliers.
+*   **Detailed Cost Breakdown**: Separates Transport, Accommodation (based on real cost-of-living indices), Food, and Local Transit.
+*   **Confidence Scoring**: Every estimate is tagged (`HIGH` for live data, `MEDIUM/LOW` for fallbacks).
+*   **Resilience First**: Network partitions or API outages gracefully degrade the service instead of showing error pages.
 
-## � Data Setup
-This project requires external datasets for city geographic data and cost indices. Due to size and licensing, these are excluded from version control.
-
-### Sourcing the Data
-1. **Cities**: Download from [SimpleMaps (World Cities Database)](https://simplemaps.com/data/world-cities) - *Basic (Free) Plan*. Save as `worker/data/worldcities.csv`.
-2. **Cost Indices**: Download from [Kaggle (Global Cost of Living)](https://www.kaggle.com/datasets/mvieira101/global-cost-of-living/data?select=cost-of-living_v2.csv). Save as `worker/data/cost-of-living_v2.csv`.
-3. **Airports**: Download from [GitHub (lxndrblz/Airports)](https://github.com/lxndrblz/Airports/blob/main/airports.csv). Save as `worker/data/airports.csv`.
-
-### Seeding the Database
-Ensure your `.env` is configured, then run:
-```bash
-cd worker
-pip install -r requirements.txt
-python seed_cities.py  # Tier 1: 48k Cities
-python seed_costs.py   # Tier 2: Cost Indices for ~2.7k cities
-```
-
-## �🛡 Design Philosophy
-1. **Truthfulness First**: Every number is an estimate with an explicit range and confidence badge.
-2. **Graceful Degradation**: External API failures shift the report to "Lower Confidence" but never result in a blank screen.
-3. **Privacy**: No login required for v1; reports are immutable tokens.
+### 🚧 Coming Soon (v1.0)
+*   **Smart Date Shifts**: "Save 20% by flying on Tuesday instead of Saturday."
+*   **Shareable Reports**: Generate a permanent link to share your trip plan with friends.
+*   **User Accounts**: Save trip history (optional).
 
 ---
-*Created by the Project Engineering Team.*
+
+## 🛠 Tech Stack
+
+| Component | Tech | Responsibility-driven Design |
+| :--- | :--- | :--- |
+| **Backend** | **Spring Boot 3** (Java 21) | Core logic, Circuit Breaking (Resilience4j), Amadeus Integration. |
+| **Frontend** | **Next.js 14** (TypeScript) | Interactive dashboard, Shadcn UI components. |
+| **Worker** | **Python** | ETL pipeline for seeding city & cost-of-living data. |
+| **Database** | **PostgreSQL 15** | Relational data for caching and reference datasets. |
+| **Infra** | **Docker Compose** | Orchestration for local development. |
+
+---
+
+## ⚡ Quick Start (Local Dev)
+
+### Prerequisites
+*   Docker & Docker Compose
+*   Java 21+
+*   Node.js 20+
+*   Amadeus API Keys (Free Tier) - *Optional (System will use fallback engine without them)*
+
+### 1. Configure Environment
+Create a `.env` file in the root directory:
+```bash
+# Database
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=secret
+POSTGRES_DB=travel
+
+# Amadeus API (Optional - Leave blank to test Fallback Engine)
+AMADEUS_CLIENT_ID=your_client_id
+AMADEUS_CLIENT_SECRET=your_client_secret
+```
+
+### 2. Seed Data
+Populate the database with cities and cost indices (run once):
+```bash
+docker-compose up -d db
+cd worker
+pip install -r requirements.txt
+python seed_cities.py
+```
+
+### 3. Run the Stack
+```bash
+# Start Backend & DB
+docker-compose up -d --build
+
+# Start Frontend (in a separate terminal)
+cd web
+npm install
+npm run dev
+```
+Visit `http://localhost:3000` to start planning.
+
+---
+
+---
+*Maintained by the Trip Cost Engineering Team.*
+

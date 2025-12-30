@@ -44,6 +44,28 @@ jobs:
           npm ci
           npm test
 
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api
+          push: false
+          tags: travel-api:test
+
+      - name: Build Web Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./web
+          push: false
+          tags: travel-web:test
+
   worker:
 
     runs-on: ubuntu-latest

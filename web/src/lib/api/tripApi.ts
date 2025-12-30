@@ -4,12 +4,21 @@
 // In development, if we are accessing via IP (like on a phone), 
 // we want to point to the backend on that same IP.
 const getApiBase = () => {
+    // Production: MUST have NEXT_PUBLIC_API_URL set
     if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) {
         return process.env.NEXT_PUBLIC_API_URL;
     }
+
+    // Development: Allow localhost fallback only in dev mode
     if (typeof window !== 'undefined') {
+        // In production build, this will fail if NEXT_PUBLIC_API_URL wasn't set at build time
+        if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_URL) {
+            throw new Error('NEXT_PUBLIC_API_URL must be set in production');
+        }
         return `http://${window.location.hostname}:8080`;
     }
+
+    // Server-side fallback (only for dev)
     return 'http://localhost:8080';
 };
 

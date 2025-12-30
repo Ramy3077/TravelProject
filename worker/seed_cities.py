@@ -2,9 +2,6 @@ import os
 import psycopg2
 import psycopg2.extras
 import pandas as pd
-from dotenv import load_dotenv
-
-load_dotenv('../.env')
 
 def get_connection():
     # Helper to resolve host (use localhost if running outside Docker)

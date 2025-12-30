@@ -26,7 +26,6 @@ public class TripRequest {
     @FutureOrPresent
     private LocalDate endDate;
 
-    @NotBlank(message = "Number of travellers is required")
     @Min(1)
     @Max(6)
     private int travellers;

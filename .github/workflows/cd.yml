@@ -10,49 +10,53 @@ on:
       - 'v*'
 
 jobs:
-  build-and-push:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
+      # 1. Auth with Google Cloud
+      - uses: google-github-actions/auth@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # 2. Configure Docker
+      - run: gcloud auth configure-docker europe-west1-docker.pkg.dev
+
+      # 3. Build & Push API
+      - name: Build API
+        run: |
+          docker build -t europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/travel-app/api:${{ github.ref_name }} ./api
+          docker push europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/travel-app/api:${{ github.ref_name }}
+
+      # 4. Deploy API
+      - uses: google-github-actions/deploy-cloudrun@v2
         with:
-          images: |
-            ghcr.io/${{ github.repository }}/api
-            ghcr.io/${{ github.repository }}/web
+          service: travel-api
+          image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/travel-app/api:${{ github.ref_name }}
+          region: europe-west1
+          env_vars: |
+            SPRING_DATASOURCE_URL=${{ secrets.PROD_DB_URL }}
+            SPRING_DATASOURCE_USERNAME=${{ secrets.PROD_DB_USER }}
+            SPRING_DATASOURCE_PASSWORD=${{ secrets.PROD_DB_PASS }}
+            SPRING_FLYWAY_BASELINE_ON_MIGRATE=true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # 5. Build & Push Web (Needs API URL)
+      - name: Get API URL
+        run: echo "API_URL=$(gcloud run services describe travel-api --region europe-west1 --format 'value(status.url)')" >> $GITHUB_ENV
 
-      - name: Convert repository owner to lowercase
-        id: lowercase
-        run: echo "owner=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+      - name: Build Web
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=${{ env.API_URL }} \
+            -t europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/travel-app/web:${{ github.ref_name }} ./web
+          docker push europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/travel-app/web:${{ github.ref_name }}
 
-      - name: Build and push API image
-        uses: docker/build-push-action@v5
+      # 6. Deploy Web
+      - uses: google-github-actions/deploy-cloudrun@v2
         with:
-          context: ./api
-          push: true
-          tags: ghcr.io/${{ steps.lowercase.outputs.owner }}/travelproject/api:${{ github.ref_name }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push Web image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./web
-          push: true
-          tags: ghcr.io/${{ steps.lowercase.outputs.owner }}/travelproject/web:${{ github.ref_name }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          service: travel-web
+          image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/travel-app/web:${{ github.ref_name }}
+          region: europe-west1

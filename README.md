@@ -80,5 +80,5 @@ Visit `http://localhost:3000` to start planning.
 ---
 
 ---
-*Maintained by the Trip Cost Engineering Team.*
+Built by [Ramy Mekhzer](https://github.com/Ramy3077) - MEng Computer Science & Software Engineering, University of Birmingham.
 

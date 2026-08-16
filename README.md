@@ -8,12 +8,17 @@ A travel estimation engine that breaks down the *true* cost and time of your tri
 
 ## ✨ Features (v0.9)
 
-### ✅ implemented & Working
-*   **Hybrid Estimation Engine**:
-    *   **Primary**: Fetches live flight quotes via **Amadeus API**.
-    *   **Fallback**: If APIs fail (or for cities with no airports), instantly switches to a robust internal calculation engine based on geodesic distance and regional multipliers.
+> **On live flight data.** The Amadeus integration this shipped with **no longer
+> serves requests**, so the deployed system runs entirely on its own estimation
+> engine. That is the case it was designed for, and it is worth being plain about:
+> the engine, not the API call, is the substance of this project.
+
+### ✅ Implemented & working
+*   **Estimation Engine**:
+    *   **Own engine (currently the only live path)**: geodesic distance and regional multipliers, producing a usable estimate with no upstream provider at all.
+    *   **Optional live provider**: a flight provider can sit in front of it as the primary source. Resilience4j circuit breaking makes the swap invisible to the caller. The Amadeus client is still wired up and tested, but the upstream no longer returns data.
 *   **Detailed Cost Breakdown**: Separates Transport, Accommodation (based on real cost-of-living indices), Food, and Local Transit.
-*   **Confidence Scoring**: Every estimate is tagged (`HIGH` for live data, `MEDIUM/LOW` for fallbacks).
+*   **Confidence Scoring**: Every estimate is tagged with the path that produced it (`HIGH` for live provider data, `MEDIUM/LOW` for the internal engine), so a number is never presented as more certain than it is.
 *   **Resilience First**: Network partitions or API outages gracefully degrade the service instead of showing error pages.
 
 ### 🚧 Coming Soon (v1.0)
@@ -27,7 +32,7 @@ A travel estimation engine that breaks down the *true* cost and time of your tri
 
 | Component | Tech | Responsibility-driven Design |
 | :--- | :--- | :--- |
-| **Backend** | **Spring Boot 3** (Java 21) | Core logic, Circuit Breaking (Resilience4j), Amadeus Integration. |
+| **Backend** | **Spring Boot 3** (Java 21) | Estimation engine, circuit breaking (Resilience4j), pluggable flight provider. |
 | **Frontend** | **Next.js 14** (TypeScript) | Interactive dashboard, Shadcn UI components. |
 | **Worker** | **Python** | ETL pipeline for seeding city & cost-of-living data. |
 | **Database** | **PostgreSQL 15** | Relational data for caching and reference datasets. |

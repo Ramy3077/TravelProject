@@ -3,7 +3,7 @@ import { isPlausibleSubstitute } from './substitutes';
 import { estimateTrip } from './estimate';
 import { round } from './money';
 import { ALL_TIERS, TIER_LABELS } from './tiers';
-import type { AffordResult, DataContext, EstimateInput, EstimateResult, Lever, Verdict } from './types';
+import type { AffordResult, DataContext, EstimateInput, EstimateResult, Lever, Verdict, VerdictCaveat } from './types';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -18,6 +18,19 @@ export function verdictFor(point: number, budget: number): Verdict {
   if (ratio <= 1.0) return 'feasible';
   if (ratio <= 1.1) return 'tight';
   return 'over';
+}
+
+/**
+ * The verdict judges the typical figure. This flags when the high end of the
+ * range undercuts it: a "comfortable" trip whose high end uses over 95% of the
+ * budget, or a "within budget" trip whose high end exceeds the budget.
+ */
+export function caveatFor(verdict: Verdict, high: number, budget: number): VerdictCaveat | undefined {
+  if (budget <= 0) return undefined;
+  const ratio = high / budget;
+  if (verdict === 'comfortable' && ratio > 0.95) return 'little_margin_at_high_end';
+  if (verdict === 'feasible' && ratio > 1) return 'may_exceed_at_high_end';
+  return undefined;
 }
 
 export interface AffordParams {
@@ -36,8 +49,10 @@ export function assessAffordability({ budget, input, ctx }: AffordParams): Affor
   const base = estimateTrip(input, ctx);
   const total = base.breakdown.total;
 
+  const verdict = verdictFor(total.point, budget);
   return {
-    verdict: verdictFor(total.point, budget),
+    verdict,
+    caveat: caveatFor(verdict, total.max, budget),
     budget,
     currency: base.currency,
     estimate: base,
@@ -174,7 +189,7 @@ function generateLevers({ budget, input, ctx, base }: LeverContext): Lever[] {
         label: `Try ${best.name}, ${best.country} instead`,
         estimatedSaving: round(basePoint - best.est.breakdown.total.point),
         resultingVerdict: verdictFor(best.est.breakdown.total.point, budget),
-        params: { destinationCityId: best.id, name: best.name },
+        params: { destinationCityId: best.id, name: best.name, country: best.country },
       });
     }
   }

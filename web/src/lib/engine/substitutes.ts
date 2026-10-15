@@ -32,7 +32,9 @@ export const SUBSTITUTE_RULES = {
   /** ...and at most this multiple of it. */
   maxPopulationRatio: 3.5,
   /** Absolute floor so tiny places are never suggested. */
-  minPopulation: 150_000,
+  minPopulation: 200_000,
+  /** Closer than this is the same metro area (a suburb), not a different trip. */
+  minDistanceKm: 50,
 } as const;
 
 export function regionOf(iso2: string): string | undefined {
@@ -54,6 +56,7 @@ export function isPlausibleSubstitute(dest: CityRecord, candidate: CityRecord): 
   if (pop > dest.population * r.maxPopulationRatio) return false;
 
   const distance = haversineKm(dest.lat, dest.lon, candidate.lat, candidate.lon);
+  if (distance < r.minDistanceKm) return false;
   if (candidate.iso2 === dest.iso2) return distance <= r.sameCountryKm;
 
   const a = regionOf(dest.iso2);

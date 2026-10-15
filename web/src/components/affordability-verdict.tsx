@@ -16,22 +16,45 @@ const VERDICTS: Record<
   over: { label: 'Over budget', icon: XCircle, text: 'text-red-700', bar: 'bg-red-500', ring: 'bg-red-100 text-red-700' },
 };
 
-export function AffordabilityVerdict({ result, currency }: { result: AffordResult; currency: DisplayCurrency }) {
+const CAVEAT_LABELS = {
+  little_margin_at_high_end: 'Affordable, little margin if costs run high',
+  may_exceed_at_high_end: 'Within budget, but could run over at the high end',
+} as const;
+
+export function AffordabilityVerdict({
+  result,
+  currency,
+  trip,
+}: {
+  result: AffordResult;
+  currency: DisplayCurrency;
+  trip?: { origin: string; destination: string; travellers: number } | null;
+}) {
   const fmt = (n: number) => formatUsd(n, currency);
   const v = VERDICTS[result.verdict];
   const Icon = v.icon;
   const total = result.estimate.breakdown.total;
   const pct = Math.min(100, Math.round((total.point / result.budget) * 100));
   const over = result.headroom < 0;
+  const label = result.caveat ? CAVEAT_LABELS[result.caveat] : v.label;
+  const { nights } = result.estimate;
+  const typicalPct = Math.round((total.point / result.budget) * 100);
+  const highPct = Math.round((total.max / result.budget) * 100);
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-5">
+      {trip && (
+        <p className="text-sm font-medium text-foreground">
+          {trip.origin} to {trip.destination} · {nights} night{nights === 1 ? '' : 's'} · {trip?.travellers} traveller
+          {trip?.travellers === 1 ? '' : 's'} · {fmt(result.budget)} budget
+        </p>
+      )}
       <div className="flex items-center gap-4">
         <div className={`p-3 rounded-full ${v.ring}`}>
           <Icon className="size-7" />
         </div>
         <div>
-          <h2 className={`text-xl font-semibold ${v.text}`}>{v.label}</h2>
+          <h2 className={`text-xl font-semibold ${v.text}`}>{label}</h2>
           <p className="text-muted-foreground">
             Estimated {fmt(total.min)} – {fmt(total.max)} for this trip
           </p>
@@ -50,6 +73,10 @@ export function AffordabilityVerdict({ result, currency }: { result: AffordResul
           {over
             ? `${fmt(Math.abs(result.headroom))} over your budget`
             : `${fmt(result.headroom)} to spare`}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          How we decided: the verdict uses the typical cost, which is {typicalPct}% of your budget. The high end of the
+          range is {highPct}%.
         </p>
       </div>
 

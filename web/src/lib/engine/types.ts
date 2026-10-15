@@ -104,8 +104,12 @@ export interface Lever {
   params?: Record<string, unknown>;
 }
 
+export type VerdictCaveat = 'little_margin_at_high_end' | 'may_exceed_at_high_end';
+
 export interface AffordResult {
   verdict: Verdict;
+  /** Set when the typical figure fits but the high end of the range leaves little or no margin. */
+  caveat?: VerdictCaveat;
   budget: number;
   currency: Currency;
   /** The full transparent breakdown behind the verdict (the "show your work"). */

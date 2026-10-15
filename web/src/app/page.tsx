@@ -52,6 +52,18 @@ const EXAMPLES: Example[] = [
   },
 ];
 
+interface Trip {
+  origin: City;
+  destination: City;
+  startDate: string;
+  endDate: string;
+  travellers: number;
+  tier: Tier;
+  /** In the display currency. */
+  budget: number;
+  currency: DisplayCurrency;
+}
+
 export default function Home() {
   const [origin, setOrigin] = useState<City | null>(null);
   const [destination, setDestination] = useState<City | null>(null);
@@ -64,6 +76,8 @@ export default function Home() {
   const [result, setResult] = useState<AffordResult | null>(null);
   const [budget, setBudget] = useState<number | ''>('');
   const [currency, setCurrency] = useState<DisplayCurrency>(DEFAULT_CURRENCY);
+  const [resultTrip, setResultTrip] = useState<{ origin: string; destination: string; travellers: number } | null>(null);
+  const [formKey, setFormKey] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
   const shouldScroll = useRef(false);
 
@@ -87,25 +101,24 @@ export default function Home() {
   const isFormValid =
     origin && destination && startDate && endDate && origin.id !== destination.id && typeof budget === 'number' && budget > 0;
 
-  // Run the affordability check from current form state, optionally overridden
-  // by a lever the user tapped.
-  const runAssess = async (override: Partial<{ originCityId: string; destinationCityId: string; startDate: string; endDate: string; travellers: number; tier: Tier; budget: number }> = {}) => {
-    if (!origin || !destination || typeof budget !== 'number') return;
+  // Run one check. The trip (names included) is snapshotted with the result so the
+  // result header stays correct even if the form is edited afterwards.
+  const run = async (trip: Trip) => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await assessAfford({
-        originCityId: origin.id,
-        destinationCityId: destination.id,
-        startDate,
-        endDate,
-        travellers: travelers,
-        tier,
-        budget: toUsd(budget, currency),
-        ...override,
+        originCityId: trip.origin.id,
+        destinationCityId: trip.destination.id,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+        travellers: trip.travellers,
+        tier: trip.tier,
+        budget: toUsd(trip.budget, trip.currency),
       });
       shouldScroll.current = true;
       setResult(res);
+      setResultTrip({ origin: trip.origin.name, destination: trip.destination.name, travellers: trip.travellers });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not check affordability');
     } finally {
@@ -113,10 +126,15 @@ export default function Home() {
     }
   };
 
+  const runAssess = (override: Partial<Trip> = {}) => {
+    if (!origin || !destination || typeof budget !== 'number') return;
+    void run({ origin, destination, startDate, endDate, travellers: travelers, tier, budget, currency, ...override });
+  };
+
   // Apply a "what to cut" suggestion: reflect it in the form, then recalculate.
   const applyLever = (lever: Lever) => {
     const p = lever.params ?? {};
-    const override: Parameters<typeof runAssess>[0] = {};
+    const override: Partial<Trip> = {};
     if (lever.kind === 'lower_tier' && typeof p.tier === 'string') {
       setTier(p.tier as Tier);
       override.tier = p.tier as Tier;
@@ -134,43 +152,31 @@ export default function Home() {
       override.travellers = p.travellers;
     }
     if (lever.kind === 'cheaper_destination' && typeof p.destinationCityId === 'string') {
-      setDestination({ id: p.destinationCityId, name: String(p.name ?? 'Selected city'), country: '' });
-      override.destinationCityId = p.destinationCityId;
+      const dest: City = { id: p.destinationCityId, name: String(p.name ?? 'Selected city'), country: String(p.country ?? '') };
+      setDestination(dest);
+      setFormKey((k) => k + 1); // remount the city inputs so they show the new city
+      override.destination = dest;
     }
-    void runAssess(override);
+    runAssess(override);
   };
 
-  // Fill the form from an example and run it straight away. Budget is sent in USD.
-  const runExample = async (ex: Example) => {
+  // Fill the form from an example (including the visible city inputs) and run it.
+  const runExample = (ex: Example) => {
     const start = addDaysISO(todayISO(), 45);
     const end = addDaysISO(start, ex.nights);
     setOrigin(ex.origin);
     setDestination(ex.destination);
+    setFormKey((k) => k + 1);
     setStartDate(start);
     setEndDate(end);
     setTravelers(ex.travellers);
     setTier(ex.tier);
     setCurrency('GBP');
     setBudget(ex.budgetGbp);
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await assessAfford({
-        originCityId: ex.origin.id,
-        destinationCityId: ex.destination.id,
-        startDate: start,
-        endDate: end,
-        travellers: ex.travellers,
-        tier: ex.tier,
-        budget: toUsd(ex.budgetGbp, 'GBP'),
-      });
-      shouldScroll.current = true;
-      setResult(res);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not check affordability');
-    } finally {
-      setIsLoading(false);
-    }
+    void run({
+      origin: ex.origin, destination: ex.destination, startDate: start, endDate: end,
+      travellers: ex.travellers, tier: ex.tier, budget: ex.budgetGbp, currency: 'GBP',
+    });
   };
 
   return (
@@ -206,7 +212,7 @@ export default function Home() {
                     <button
                       key={ex.label}
                       type="button"
-                      onClick={() => void runExample(ex)}
+                      onClick={() => runExample(ex)}
                       disabled={isLoading}
                       className="text-sm px-3 py-1.5 rounded-full border border-border bg-accent/50 hover:border-primary/50 hover:bg-accent transition-all text-left"
                     >
@@ -217,8 +223,8 @@ export default function Home() {
               </div>
 
               <div className="space-y-5">
-                <CityAutocomplete label="Travelling from" value={origin} onChange={setOrigin} placeholder="Where are you starting?" id="origin-city" />
-                <CityAutocomplete label="Destination" value={destination} onChange={setDestination} placeholder="Where do you want to go?" id="destination-city" />
+                <CityAutocomplete key={`o${formKey}`} label="Travelling from" value={origin} onChange={setOrigin} placeholder="Where are you starting?" id="origin-city" />
+                <CityAutocomplete key={`d${formKey}`} label="Destination" value={destination} onChange={setDestination} placeholder="Where do you want to go?" id="destination-city" />
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <DatePicker label="Start Date" value={startDate} onChange={setStartDate} min={todayISO()} id="start-date" />
@@ -262,7 +268,7 @@ export default function Home() {
           <div className="lg:sticky lg:top-8 lg:self-start space-y-6">
             {result ? (
               <div ref={resultsRef} role="region" tabIndex={-1} aria-label="Your result" className="space-y-6 outline-none scroll-mt-4">
-                <AffordabilityVerdict result={result} currency={currency} />
+                <AffordabilityVerdict result={result} currency={currency} trip={resultTrip} />
                 <WhatToCut levers={result.levers} onApply={applyLever} currency={currency} />
                 <TripCostBreakdown estimate={result.estimate} currency={currency} />
               </div>

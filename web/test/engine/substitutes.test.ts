@@ -14,6 +14,7 @@ const SEVILLE = city('seville', 'Seville', 'ES', 37.3886, -5.9823, 688_711);
 const TETOUAN = city('tetouan', 'Tetouan', 'MA', 35.5667, -5.3667, 422_757);
 const TINY = city('tiny', 'Tinyville', 'PT', 38.9, -9.0, 20_000);
 const MEGA = city('mega', 'Megacity', 'PT', 38.9, -9.0, 9_000_000);
+const SEIXAL = city('seixal', 'Seixal', 'PT', 38.6428, -9.1061, 300_000);
 const FAR_PT = city('far', 'Faraway', 'PT', 38.0, -9.0, 500_000);
 
 describe('isPlausibleSubstitute', () => {
@@ -25,6 +26,9 @@ describe('isPlausibleSubstitute', () => {
   });
   it('rejects a city across the sea in another region (Tetouan for Lisbon)', () => {
     expect(isPlausibleSubstitute(LISBON, TETOUAN)).toBe(false);
+  });
+  it('rejects a suburb in the same metro area (Seixal for Lisbon)', () => {
+    expect(isPlausibleSubstitute(LISBON, SEIXAL)).toBe(false);
   });
   it('rejects tiny places and cities of very different size', () => {
     expect(isPlausibleSubstitute(LISBON, TINY)).toBe(false);
@@ -62,5 +66,29 @@ describe('cheaper_destination lever', () => {
     const r = assessAffordability({ budget: 100, input, ctx });
     const lever = r.levers.find((l) => l.kind === 'cheaper_destination');
     expect(lever?.params?.destinationCityId).toBe(PORTO.id);
+  });
+});
+
+describe('cheaper_destination lever on the real dataset', () => {
+  it('never suggests a suburb for Lisbon', async () => {
+    const { repository } = await import('@/lib/data/repository');
+    const { haversineKm } = await import('@/lib/engine/distance');
+    const lisbon = repository.getCity('1620619017')!;
+    const london = repository.getCity('1826645935')!;
+    const r = assessAffordability({
+      budget: 800,
+      input: {
+        originCityId: london.id, destinationCityId: lisbon.id,
+        startDate: '2026-12-01', endDate: '2026-12-06', travellers: 2, tier: 'balanced',
+      },
+      ctx: repository,
+    });
+    const lever = r.levers.find((l) => l.kind === 'cheaper_destination');
+    if (lever) {
+      const alt = repository.getCity(String(lever.params?.destinationCityId))!;
+      expect(alt.name).not.toBe('Seixal');
+      expect(haversineKm(lisbon.lat, lisbon.lon, alt.lat, alt.lon)).toBeGreaterThanOrEqual(50);
+      expect(alt.population).toBeGreaterThanOrEqual(200_000);
+    }
   });
 });

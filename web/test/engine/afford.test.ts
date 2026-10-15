@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assessAffordability, verdictFor } from '@/lib/engine/afford';
+import { assessAffordability, caveatFor, verdictFor } from '@/lib/engine/afford';
 import { estimateTrip } from '@/lib/engine/estimate';
 import type { EstimateInput } from '@/lib/engine/types';
 import { LONDON, PARIS, makeContext } from '../fixtures';
@@ -86,5 +86,20 @@ describe('assessAffordability', () => {
     };
     const r = assessAffordability({ budget: Math.round(point * 0.7), input, ctx: ctxWithNeighbour });
     expect(r.levers.some((l) => l.kind === 'cheaper_destination')).toBe(true);
+  });
+});
+
+describe('caveatFor', () => {
+  it('flags a comfortable verdict whose high end uses over 95% of budget', () => {
+    expect(caveatFor('comfortable', 1475, 1500)).toBe('little_margin_at_high_end');
+    expect(caveatFor('comfortable', 1200, 1500)).toBeUndefined();
+  });
+  it('flags a within-budget verdict whose high end exceeds budget', () => {
+    expect(caveatFor('feasible', 1600, 1500)).toBe('may_exceed_at_high_end');
+    expect(caveatFor('feasible', 1500, 1500)).toBeUndefined();
+  });
+  it('adds nothing for tight or over verdicts', () => {
+    expect(caveatFor('tight', 2000, 1500)).toBeUndefined();
+    expect(caveatFor('over', 2000, 1500)).toBeUndefined();
   });
 });

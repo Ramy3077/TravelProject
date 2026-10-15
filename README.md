@@ -4,7 +4,7 @@
 
 Enter a trip and a budget. Get a yes or no, how many days the budget covers, and the changes that would bring the cost down.
 
-<!-- Live demo link goes here once the Vercel project exists: **Live demo: https://...** -->
+**Live demo: https://web-production-a9b34.up.railway.app**
 
 ![The app estimating a week in Paris from London for two people on a $2,500 budget](docs/screenshot.png)
 
@@ -33,9 +33,9 @@ flowchart LR
   E -->|verdict, levers, breakdown| UI
 ```
 
-One Next.js 16 app on Vercel: React 19, TypeScript, Tailwind v4, zod. The engine in [`web/src/lib/engine`](web/src/lib/engine) has no framework imports and no I/O, so it is unit-tested directly with vitest. The dataset is built from CSVs by [`web/scripts/build-dataset.ts`](web/scripts/build-dataset.ts) and committed as JSON, so there is no database.
+One Next.js 16 app, deployed on Railway from `web/Dockerfile` (standalone output): React 19, TypeScript, Tailwind v4, zod. The engine in [`web/src/lib/engine`](web/src/lib/engine) has no framework imports and no I/O, so it is unit-tested directly with vitest. The dataset is built from CSVs by [`web/scripts/build-dataset.ts`](web/scripts/build-dataset.ts) and committed as JSON, so there is no database.
 
-The rate limiter is in memory. On serverless each instance keeps its own counts, so it limits bursts from one client rather than enforcing an exact global quota. A shared store such as Redis would be needed for that.
+The rate limiter is in memory, so each running instance keeps its own counts and a restart resets them. It stops bursts from one client; an exact quota across several instances would need a shared store such as Redis.
 
 API: `POST /api/trips/afford`, `POST /api/trips/estimate`, `GET /api/locations/cities?q=`, `GET /api/health`.
 

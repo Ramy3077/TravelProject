@@ -147,17 +147,14 @@ refresh data.
   `test/server-only-stub.ts` neutralizes the `server-only` import so the repository is testable.
 - `.claude/` is **gitignored** (it holds a local bypass-permissions default + machine-specific
   allowlist — must not ship publicly). `worker/data/*.csv`, `.venv/`, build logs, `.env` are ignored.
-- The file `worker/<style>@charset "UTF-8";html{font-family` is stray junk from an accidental write —
-  not source; safe to delete.
 
 ## CI/CD
 
 - **CI** (`.github/workflows/ci.yml`): `web` job runs `npm ci → lint → tsc → test → build` (the active
   product). `api` (`mvn test`), `worker`, and `docker-build` jobs validate the reference modules.
-- **CD** (`.github/workflows/cd.yml`): on a `v*` tag, builds the single `web` image and deploys
-  `travel-web` to Cloud Run (`europe-west1`). No API, no DB, no Amadeus, no `NEXT_PUBLIC_API_URL`.
-  Vercel (`vercel --prod` from `web/`) is an even simpler alternative — the data is baked, so there's
-  no cold-DB problem.
+- **Deploy**: Railway project `trip-afford`, service `web` (root `/web`, built from `web/Dockerfile`,
+  healthcheck `/api/health`, `PORT=3000`). Auto-deploys on push to `main` touching `web/**`.
+  Live at https://web-production-a9b34.up.railway.app. There is no `cd.yml`.
 
 ## Docs that are partly aspirational (trust the code)
 

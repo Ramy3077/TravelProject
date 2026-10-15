@@ -3,15 +3,17 @@
 import React from 'react';
 import { Scissors, TrendingDown, ChevronRight } from 'lucide-react';
 import type { Lever } from '@/lib/api/tripApi';
+import { formatUsd, type DisplayCurrency } from '@/lib/currency';
 
-const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
 interface WhatToCutProps {
   levers: Lever[];
   onApply: (lever: Lever) => void;
+  currency: DisplayCurrency;
 }
 
-export function WhatToCut({ levers, onApply }: WhatToCutProps) {
+export function WhatToCut({ levers, onApply, currency }: WhatToCutProps) {
+  const fmt = (n: number) => formatUsd(n, currency);
   if (levers.length === 0) return null;
 
   return (

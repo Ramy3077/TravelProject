@@ -1,5 +1,5 @@
 import { addDays, monthOf, nightsBetween } from './date';
-import { haversineKm } from './distance';
+import { isPlausibleSubstitute } from './substitutes';
 import { estimateTrip } from './estimate';
 import { round } from './money';
 import { ALL_TIERS, TIER_LABELS } from './tiers';
@@ -145,18 +145,14 @@ function generateLevers({ budget, input, ctx, base }: LeverContext): Lever[] {
     }
   }
 
-  // 4. A cheaper nearby destination. Only suggest places people actually travel
-  //    to — a population floor stops us recommending an obscure cheap village
-  //    just because its cost-of-living number is the lowest within range.
+  // 4. A cheaper, plausible substitute destination: same country, or a
+  //    neighbour in the same region, of similar city size (see substitutes.ts).
   const dest = ctx.getCity(input.destinationCityId);
   if (dest) {
-    const RADIUS_KM = 900;
-    const MIN_POPULATION = 250_000;
     const nearby = ctx
       .costCities()
-      .filter((c) => c.id !== dest.id && c.id !== input.originCityId && c.population >= MIN_POPULATION)
-      .map((c) => ({ c, distance: haversineKm(dest.lat, dest.lon, c.lat, c.lon) }))
-      .filter((x) => x.distance <= RADIUS_KM)
+      .filter((c) => c.id !== input.originCityId && isPlausibleSubstitute(dest, c))
+      .map((c) => ({ c }))
       .sort((a, b) => (ctx.getCost(a.c.id)?.accMid ?? Infinity) - (ctx.getCost(b.c.id)?.accMid ?? Infinity))
       .slice(0, 6);
 

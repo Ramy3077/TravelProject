@@ -3,8 +3,8 @@
 import React from 'react';
 import { CheckCircle2, ThumbsUp, AlertTriangle, XCircle, CalendarRange } from 'lucide-react';
 import type { AffordResult, Verdict } from '@/lib/api/tripApi';
+import { formatUsd, type DisplayCurrency } from '@/lib/currency';
 
-const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
 const VERDICTS: Record<
   Verdict,
@@ -16,7 +16,8 @@ const VERDICTS: Record<
   over: { label: 'Over budget', icon: XCircle, text: 'text-red-700', bar: 'bg-red-500', ring: 'bg-red-100 text-red-700' },
 };
 
-export function AffordabilityVerdict({ result }: { result: AffordResult }) {
+export function AffordabilityVerdict({ result, currency }: { result: AffordResult; currency: DisplayCurrency }) {
+  const fmt = (n: number) => formatUsd(n, currency);
   const v = VERDICTS[result.verdict];
   const Icon = v.icon;
   const total = result.estimate.breakdown.total;

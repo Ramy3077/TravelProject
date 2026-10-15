@@ -172,4 +172,6 @@ export interface DatasetMeta {
   adjustedCountryCount?: number;
   populationThreshold: number;
   fuzzyThreshold: number;
+  /** Fixed display rates: units of each currency per 1 USD. The engine itself stays in USD. */
+  fx?: { base: 'USD'; asOf: string; note: string; rates: Record<string, number> };
 }

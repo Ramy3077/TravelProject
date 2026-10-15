@@ -78,7 +78,7 @@ export function CityAutocomplete({
                         onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                         placeholder={placeholder}
                         className="w-full pl-10 pr-10 py-3 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                        aria-label={label}
+                        autoComplete="off"
                     />
                     {isLoading ? (
                         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground animate-spin" />

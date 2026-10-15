@@ -334,6 +334,8 @@ function build(): void {
     adjustedCountryCount: adjustedCountries.size,
     populationThreshold: POPULATION_THRESHOLD,
     fuzzyThreshold: FUZZY_THRESHOLD,
+    // Fixed display rates (USD per 1 unit is NOT used: rate = units of currency per 1 USD).
+    fx: { base: 'USD', asOf: '2026-10-15', note: 'Fixed reference rates, not live', rates: { USD: 1, GBP: 0.75, EUR: 0.86 } },
   };
 
   fs.mkdirSync(OUT_DIR, { recursive: true });

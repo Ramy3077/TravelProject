@@ -3,6 +3,8 @@
 import React from 'react';
 import { Plane, Hotel, Utensils, Bus, Info } from 'lucide-react';
 import type { Confidence, EstimateResult } from '@/lib/api/tripApi';
+import { formatUsd, type DisplayCurrency } from '@/lib/currency';
+
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -15,9 +17,8 @@ const confidenceConfig: Record<Confidence, { color: string; label: string }> = {
   low: { color: 'bg-orange-100 text-orange-800 border-orange-200', label: 'Low' },
 };
 
-const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
-
-export function TripCostBreakdown({ estimate }: { estimate: EstimateResult }) {
+export function TripCostBreakdown({ estimate, currency }: { estimate: EstimateResult; currency: DisplayCurrency }) {
+  const fmt = (n: number) => formatUsd(n, currency);
   const { breakdown, factors, metadata, nights, days } = estimate;
 
   const sections = [

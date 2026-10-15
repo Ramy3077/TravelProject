@@ -27,10 +27,7 @@ export function CityAutocomplete({
 
     // Debounced search
     useEffect(() => {
-        if (inputValue.length < 2) {
-            setCities([]);
-            return;
-        }
+        if (inputValue.length < 2) return;
 
         const timer = setTimeout(async () => {
             setIsLoading(true);
@@ -48,6 +45,9 @@ export function CityAutocomplete({
 
         return () => clearTimeout(timer);
     }, [inputValue]);
+
+    // Short queries show nothing, without clearing state inside the effect.
+    const visibleCities = inputValue.length < 2 ? [] : cities;
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
@@ -87,9 +87,9 @@ export function CityAutocomplete({
                     )}
                 </div>
 
-                {isFocused && cities.length > 0 && (
+                {isFocused && visibleCities.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {cities.map((city) => (
+                        {visibleCities.map((city) => (
                             <button
                                 key={city.id}
                                 onClick={() => handleCitySelect(city)}

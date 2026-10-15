@@ -22,7 +22,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         </div>
         <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
         <p className="text-muted-foreground">
-          We hit an unexpected problem while working out your trip. This is on us, not you — please try again.
+          We hit an unexpected problem while working out your trip. This is on us, not you. Please try again.
         </p>
         <button
           onClick={reset}

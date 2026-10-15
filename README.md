@@ -1,152 +1,58 @@
 # Can I Afford This Trip?
 
-> Enter where you're going, when, how many of you, your travel style, and a **budget** — get a
-> straight answer: **can you afford it?** Plus how many days you *could* afford, a ranked list of
-> ways to bring the cost down, and a transparent, uncertainty-aware breakdown of where the money goes.
+[![CI](https://github.com/Ramy3077/TravelProject/actions/workflows/ci.yml/badge.svg)](https://github.com/Ramy3077/TravelProject/actions/workflows/ci.yml)
 
-A single **TypeScript / Next.js** full-stack app. No login, no tracking, no external API on the
-request path, and no database to keep warm — the reference data ships baked into the build, so the
-app always returns an answer.
+Enter a trip and a budget. Get a yes or no, how many days the budget covers, and the changes that would bring the cost down.
 
-```
-You: London → Paris, 1–10 Aug, 2 travellers, Balanced, budget $2,500
-App: Over budget by ~$400 (est. $2,900).  You could afford ~8 days on this budget.
-     Ways to fit it:  • Shorten to 5 nights        (save ~$1,110)
-                      • Travel with 1 fewer person  (save ~$740)
-                      • Switch to the Budget tier   (save ~$615)
-                      • Travel in September          (save ~$280, cheaper season)
-                      • Try a cheaper nearby city    (save ~$1,200)
-     Breakdown: transport $279 · accommodation $1,412 · food $1,091 · getting around $115
-```
+**Live demo: DEMO_URL_PLACEHOLDER**
 
----
+![The app estimating a week in Paris from London for two people on a $2,500 budget](docs/screenshot.png)
 
-## Why it's built this way
+## How the estimate works
 
-This began as a learning project (a Spring Boot + Python + Supabase "trip cost decomposer") and was
-deliberately reshaped into something publishable. The interesting decisions:
+The cost model runs inside the app, so every request gets an answer without calling an outside API.
 
-- **Graceful degradation is the default, not a fallback path.** The cost engine is a pure, internal
-  model that *always* produces an answer. Any external price feed is *optional enrichment* that can
-  only raise confidence — there is structurally no dependency to fail. The old design wrapped a live
-  flight API (Amadeus) in a circuit breaker; Amadeus is being decommissioned, so it's gone, but the
-  resilience pattern (circuit breaker + cache) is ported to TS and kept as a documented seam.
-- **No runtime database.** City and cost-of-living data is static reference data, so it's processed
-  at build time into committed JSON loaded once into memory (`import 'server-only'` keeps the ~1.4 MB
-  dataset out of the client bundle). No DB to provision, pause, or pay for.
-- **Honest about uncertainty.** Every line carries a min–max range and a confidence tag derived from
-  *data coverage* (city-level → country-median → global default). The data vintage and sources are
-  shown in the UI.
-- **The numbers are modelled, and the model is documented.** Airfare uses a non-linear
-  **distance-band** curve (short hops cost more per km than long-haul); 2019 cost data is
-  **inflation-adjusted to 2024** via the World Bank CPI at build time; nightly lodging applies a
-  documented short-stay premium over pro-rated rent. No magic numbers — see [`web/src/lib/engine`](web/src/lib/engine).
-- **AI-ready, but no AI yet.** The engine is a set of pure functions over a stable typed contract,
-  the "ways to cut" levers carry machine-readable `params`, and there's a `parseTripQuery` stub — so
-  a natural-language / agent layer can be added later without a refactor.
+- **Fallback chain.** Accommodation, food and local transport come from cost-of-living data for the destination city. If the city has no data, the country median is used, then a global default. Each step down lowers the confidence tag on that line.
+- **Tiers.** Budget, Balanced and Comfort change every category: airfare class, type of stay, food spend and local transport. They are defined in one file, [`tiers.ts`](web/src/lib/engine/tiers.ts).
+- **Seasonality.** The trip month sets a peak (x1.2), shoulder (x1.0) or off-season (x0.85) multiplier, flipped for the southern hemisphere.
+- **Transport.** Return airfare comes from a distance-banded curve, so short hops cost more per km than long-haul. It is a model, not a live fare, so its confidence is capped at medium.
+- **Levers.** The engine reruns itself with one change at a time: a cheaper tier, fewer nights, a cheaper month, a nearby cheaper city, or one fewer traveller. Changes that save money are ranked by saving. Clicking one applies it.
+- **Verdict.** Estimated cost up to 80% of the budget is comfortable, up to 100% is within budget, up to 110% is tight, and above that is over.
 
----
+Cost data is a 2019 cost-of-living dataset adjusted to 2024 prices with World Bank CPI figures per country.
 
-## How it works — the resilience chain
+## Architecture (v2)
 
-```
-POST /api/trips/afford
-   └─ zod validation ──→ assessAffordability(budget, input, ctx)
-                              ├─ estimateTrip(input, ctx)            ← pure, synchronous
-                              │     ├─ transport   (distance bands × tier × season)
-                              │     ├─ accommodation, food, getting-around
-                              │     │     └─ resolveCost: city → country median → global default
-                              │     │            (confidence: high → medium → low)
-                              │     └─ seasonality (hemisphere-aware, from the trip dates)
-                              ├─ verdict   (point estimate vs budget: comfortable/feasible/tight/over)
-                              ├─ maxAffordableDays
-                              └─ levers    (re-run the engine with perturbed inputs, rank by saving)
+```mermaid
+flowchart LR
+  UI[React UI] -->|POST /api/trips/afford| R[Next.js route handlers]
+  R --> RL[Per-IP rate limit]
+  RL --> V[zod validation]
+  V --> E[Pure TypeScript engine]
+  E --> D[(Baked JSON dataset<br/>8,271 cities)]
+  E -->|verdict, levers, breakdown| UI
 ```
 
-The engine in [`web/src/lib/engine`](web/src/lib/engine) is framework-free and unit-tested — no
-`fetch`, no `fs`, no Next imports — which is what makes it both trivially testable and directly
-callable by a future tool/agent layer.
+One Next.js 16 app on Vercel: React 19, TypeScript, Tailwind v4, zod. The engine in [`web/src/lib/engine`](web/src/lib/engine) has no framework imports and no I/O, so it is unit-tested directly with vitest. The dataset is built from CSVs by [`web/scripts/build-dataset.ts`](web/scripts/build-dataset.ts) and committed as JSON, so there is no database.
 
-## Project structure
+The rate limiter is in memory. On serverless each instance keeps its own counts, so it limits bursts from one client rather than enforcing an exact global quota. A shared store such as Redis would be needed for that.
 
-```
-web/                         # the app (this is the product)
-  src/app/                   # Next.js App Router
-    page.tsx                 #   budget-first UI
-    api/                     #   route handlers (~20 lines each: validate → engine → map errors)
-    error.tsx                #   error boundary (never shows a raw stack)
-  src/lib/
-    engine/                  # PURE cost engine — the heart of the app
-    data/                    # in-memory repository over the baked dataset (server-only)
-    resilience/              # dependency-free circuit breaker + LRU/TTL cache
-    providers/               # price-trends seam (null provider by default)
-    validation/              # zod schemas
-    http/                    # safe error mapper + IP rate limiter
-  scripts/
-    build-dataset.ts         # CSV → committed JSON (ports the old Python seeders)
-    fetch-cpi.ts             # World Bank CPI → committed inflation factors
-  test/                      # vitest (engine, resilience, http, data)
+API: `POST /api/trips/afford`, `POST /api/trips/estimate`, `GET /api/locations/cities?q=`, `GET /api/health`.
 
-api/      worker/            # ORIGINAL Java/Spring + Python implementation — kept for reference only
-infra/                       # deployment notes
-```
+## The v1 backend (`api/` and `worker/`)
 
-> **`api/` and `worker/` are the original learning-project implementation, preserved for reference.**
-> They are not built or deployed by CI/CD and the live app does not use them. The cost logic now lives
-> in `web/src/lib/engine`; the Python seeders' logic now lives in `web/scripts/build-dataset.ts`.
+The first version was a Spring Boot 3 / Java 21 API, a Python ETL worker and a Postgres database on Supabase, with live fares from the Amadeus API. That code is kept in the repo for reference. It is not deployed, though CI still builds and tests the Java module.
 
-## Quick start
+v2 moved everything into one TypeScript app. The JVM's cold starts made a free-tier demo slow to wake. Amadeus shut down its self-service API, so the live fare source was gone. Supabase paused the free database after a week without traffic. The city and cost data never changes at runtime, so it fits in a JSON file shipped with the app.
+
+## Run locally
 
 ```bash
-cd web
-npm install
-npm run dev        # http://localhost:3000
-npm test           # unit tests (vitest)
-npm run build      # production build (does NOT need the source CSVs — JSON is committed)
+cd web && npm install && npm run dev
 ```
 
-That's it — no env vars, no database, no API keys.
+Then open http://localhost:3000. Checks: `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build`.
 
-### Regenerating the dataset (optional)
+## Data sources
 
-The processed dataset is committed, so you only need this to refresh the data:
-
-```bash
-npm run fetch:cpi    # refresh World Bank inflation factors → scripts/cpi-factors.json
-npm run build:data   # rebuild the baked dataset from worker/data/*.csv (gitignored source CSVs)
-```
-
-## Tech & engineering notes
-
-| Area | Choice |
-| :--- | :--- |
-| **Stack** | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 |
-| **Validation** | zod schemas; all errors mapped to clean JSON (no leaked stack traces) |
-| **Resilience** | hand-rolled circuit breaker + LRU/TTL cache (ports of Resilience4j + Caffeine) |
-| **Security** | same-origin (no CORS), zod validation, IP rate limiting, no exposed internals |
-| **Data** | 8,271 cities (4,527 with city-level cost), 200 country medians; CPI-adjusted to 2024 |
-| **Testing** | vitest — engine, affordability, resilience, rate limiting, repository |
-| **Deploy** | one container (`output: standalone`) → Cloud Run, or `vercel --prod` from `web/` |
-
-## Data sources & attribution
-
-- **SimpleMaps World Cities** — city names, coordinates, population.
-- **OurAirports** — IATA codes.
-- **Cost of Living** (Numbeo-derived, Kaggle, ~2019) — food, transit, rent indices.
-- **World Bank** — Consumer Price Index (`FP.CPI.TOTL`), used to inflation-adjust costs to 2024 (open data).
-
-Costs are **estimates**, not quotes — actual prices vary with availability, season, and how you book.
-
-## Known limitations (by design)
-
-- Single currency (USD) for v1.
-- Seasonality is a coarse, hemisphere-aware month bucket, not event-level data ("Rio at Carnival").
-- Accommodation is derived from cost-of-living rent indices with a documented short-stay premium, not
-  live listings.
-- Transport is a calibrated model, not a live fare. The provider seam exists to add a real
-  price-trends feed (e.g. Travelpayouts) later.
-
----
-
-*Originally a Spring Boot learning project; rebuilt as a single TypeScript app focused on the question
-travellers actually ask.*
+SimpleMaps World Cities (cities and coordinates), OurAirports (airport codes), a Numbeo-derived cost-of-living dataset from Kaggle (~2019), and World Bank CPI (`FP.CPI.TOTL`). All figures are USD estimates, not quotes.

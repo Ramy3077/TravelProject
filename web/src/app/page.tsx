@@ -92,7 +92,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-foreground text-xl font-semibold">Can I Afford This Trip?</h1>
-              <p className="text-muted-foreground">An honest, all-in cost estimate — and how to fit your budget.</p>
+              <p className="text-muted-foreground">An all-in cost estimate, and how to fit your budget.</p>
             </div>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-foreground mb-2 font-medium">Dreaming of a trip?</h3>
                 <p className="text-muted-foreground max-w-sm mx-auto">
-                  Enter where you want to go, your dates, and your budget — we&apos;ll tell you if it&apos;s doable and
+                  Enter where you want to go, your dates, and your budget. We&apos;ll tell you if it&apos;s doable and
                   how to make it fit.
                 </p>
               </div>

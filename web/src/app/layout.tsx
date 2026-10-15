@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Can I Afford This Trip?",
-  description: "An honest, all-in trip cost estimate — transport, accommodation, food, and getting around — and how to fit your budget.",
+  description: "An all-in trip cost estimate covering transport, accommodation, food and getting around, and how to fit your budget.",
 };
 
 export default function RootLayout({

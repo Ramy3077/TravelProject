@@ -23,7 +23,7 @@ confidence, never block a response.
 
 ### `api/` (Java/Spring) and `worker/` (Python) are the ORIGINAL implementation, kept for reference
 
-They are **not built or deployed** and the live app does not use them. Do **not** wire the app back to
+They are **not deployed** (CI still builds and tests the Java module) and the live app does not use them. Do **not** wire the app back to
 them. The cost logic was reimplemented in `web/src/lib/engine`; the Python seeders' logic was ported
 to `web/scripts/build-dataset.ts`. (History: the project started as a Spring Boot + Python + Supabase
 "trip cost decomposer" wrapping the Amadeus flight API. Amadeus is being decommissioned, Supabase's

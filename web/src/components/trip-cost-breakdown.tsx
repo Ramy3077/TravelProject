@@ -72,7 +72,7 @@ export function TripCostBreakdown({ estimate }: { estimate: EstimateResult }) {
           {seasonNote} · transport is modelled, not a live quote.
         </p>
         <p>
-          {metadata.dataSource}. Estimates only — actual prices vary with availability, season, and how you book.
+          {metadata.dataSource}. Estimates only. Actual prices vary with availability, season, and how you book.
         </p>
         <p className="text-muted-foreground/70">
           Data: SimpleMaps WorldCities · OurAirports · Numbeo-derived cost of living ({metadata.dataVintage}) ·

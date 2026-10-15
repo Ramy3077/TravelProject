@@ -4,7 +4,7 @@
 
 Enter a trip and a budget. Get a yes or no, how many days the budget covers, and the changes that would bring the cost down.
 
-**Live demo: DEMO_URL_PLACEHOLDER**
+<!-- Live demo link goes here once the Vercel project exists: **Live demo: https://...** -->
 
 ![The app estimating a week in Paris from London for two people on a $2,500 budget](docs/screenshot.png)
 

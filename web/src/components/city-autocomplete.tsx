@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Search, Loader2 } from 'lucide-react';
 import { searchCities, City } from '@/lib/api/tripApi';
 
@@ -38,7 +38,7 @@ export function CityAutocomplete({
             try {
                 const results = await searchCities(inputValue);
                 setCities(results);
-            } catch (err) {
+            } catch {
                 setError('Failed to search cities');
                 setCities([]);
             } finally {

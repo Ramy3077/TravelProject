@@ -1,110 +1,55 @@
-// API Client for Trip Cost Estimator
-// Connects to Spring Boot backend on localhost:8080
+// API client for the Trip Cost app.
+//
+// Same-origin: the API now lives in this same Next.js app (route handlers under
+// /api/*), so there is no separate backend URL and no NEXT_PUBLIC_API_URL to
+// bake in at build time. Types are shared with the engine — one source of truth.
 
-// In development, if we are accessing via IP (like on a phone), 
-// we want to point to the backend on that same IP.
-const getApiBase = () => {
-    // Production: MUST have NEXT_PUBLIC_API_URL set
-    if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) {
-        return process.env.NEXT_PUBLIC_API_URL;
-    }
+import type { AffordResult, EstimateInput, EstimateResult } from '@/lib/engine/types';
 
-    // Development: Allow localhost fallback only in dev mode
-    if (typeof window !== 'undefined') {
-        // In production build, this will fail if NEXT_PUBLIC_API_URL wasn't set at build time
-        if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_URL) {
-            throw new Error('NEXT_PUBLIC_API_URL must be set in production');
-        }
-        return `http://${window.location.hostname}:8080`;
-    }
+export type { AffordResult, Confidence, EstimateInput, EstimateResult, CostRange, Lever, Tier, Verdict } from '@/lib/engine/types';
 
-    // Server-side fallback (only for dev)
-    return 'http://localhost:8080';
-};
-
-const API_BASE = getApiBase();
-
-// Types matching our backend DTOs
 export interface City {
-    id: string;
-    name: string;
-    country: string;
-    latitude?: number;
-    longitude?: number;
+  id: string;
+  name: string;
+  country: string;
 }
 
-export interface TripRequest {
-    originCityId: string;
-    destinationCityId: string;
-    startDate: string;  // ISO format YYYY-MM-DD
-    endDate: string;
-    travellers: number;
-    preference: 'CHEAP' | 'BALANCED' | 'FAST';
+export type AffordRequest = EstimateInput & { budget: number };
+
+interface ApiErrorBody {
+  error: string;
+  message: string;
+  fields?: Record<string, string>;
 }
 
-export interface CostRange {
-    min: number;
-    max: number;
-    confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    const detail = err?.fields ? Object.values(err.fields)[0] : undefined;
+    throw new Error(detail || err?.message || 'Request failed');
+  }
+  return res.json() as Promise<T>;
 }
 
-export interface TripResponse {
-    breakdown: {
-        transport: CostRange;
-        accommodation: CostRange;
-        food: CostRange;
-        total: CostRange;
-    };
-    alternatives: unknown[];
-    metadata: {
-        dataSource: string;
-        generatedAt: string;
-    };
-}
-
-export interface ApiError {
-    status: number;
-    error: string;
-    message: string;
-    timestamp: string;
-}
-
-/**
- * Search cities by name prefix
- * @param query - Search term (min 2 chars)
- * @returns Array of matching cities
- */
+/** Search cities by name (min 2 chars). Returns up to 10 matches. */
 export async function searchCities(query: string): Promise<City[]> {
-    if (query.length < 2) return [];
-
-    const res = await fetch(`${API_BASE}/api/locations/cities?q=${encodeURIComponent(query)}`);
-    if (!res.ok) {
-        throw new Error('Failed to fetch cities');
-    }
-    return res.json();
+  if (query.trim().length < 2) return [];
+  const res = await fetch(`/api/locations/cities?q=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error('Failed to search cities');
+  return res.json();
 }
 
-/**
- * Get trip cost estimate from fallback engine
- * @param params - Trip parameters
- * @returns Cost breakdown
- */
-export async function estimateTrip(params: TripRequest): Promise<TripResponse> {
-    const query = new URLSearchParams({
-        originCityId: params.originCityId,
-        destinationCityId: params.destinationCityId,
-        startDate: params.startDate,
-        endDate: params.endDate,
-        travellers: params.travellers.toString(),
-        preference: params.preference,
-    });
+/** Transparent cost breakdown for a trip. */
+export function estimateTrip(input: EstimateInput): Promise<EstimateResult> {
+  return postJson<EstimateResult>('/api/trips/estimate', input);
+}
 
-    const res = await fetch(`${API_BASE}/api/trips/estimate?${query}`);
-
-    if (!res.ok) {
-        const error: ApiError = await res.json();
-        throw new Error(error.message || 'Estimation failed');
-    }
-
-    return res.json();
+/** "Can I afford this?" — verdict, headroom, max affordable days, and ways to save. */
+export function assessAfford(req: AffordRequest): Promise<AffordResult> {
+  return postJson<AffordResult>('/api/trips/afford', req);
 }

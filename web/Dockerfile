@@ -27,8 +27,8 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 # ENV NEXT_TELEMETRY_DISABLED 1
 
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# No build args needed: the app is same-origin (its API routes live in the same
+# service) and ships its dataset baked in, so there is no API URL or DB to wire.
 
 RUN \
     if [ -f yarn.lock ]; then yarn run build; \

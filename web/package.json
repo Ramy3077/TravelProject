@@ -5,24 +5,35 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:data": "tsx scripts/build-dataset.ts",
+    "fetch:cpi": "tsx scripts/fetch-cpi.ts",
     "start": "next start",
     "lint": "eslint",
-    "test": "echo \"No tests configured yet\" && exit 0"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "lru-cache": "^10.4.3",
     "lucide-react": "^0.562.0",
     "next": "16.2.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "server-only": "^0.0.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/papaparse": "^5.3.14",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "fastest-levenshtein": "^1.0.16",
+    "papaparse": "^5.4.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.19.0",
+    "typescript": "^5",
+    "vitest": "^2.1.0"
   }
 }

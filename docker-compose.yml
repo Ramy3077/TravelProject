@@ -1,6 +1,23 @@
+# The product is now the single Next.js app in web/ — it has no database and no
+# external API dependency, so `docker compose up` builds and runs just that.
+#
+#   docker compose up --build            → the live app at http://localhost:3000
+#   docker compose --profile legacy up   → the ORIGINAL Java API + Postgres +
+#                                           Python worker stack, kept for reference
+#                                           (needs the legacy vars in .env).
 services:
+  web:
+    build:
+      context: ./web
+    ports:
+      - "3000:3000"
+
+  # ---- Legacy reference stack (not started by default) ---------------------
+  # The original Spring Boot API, its Postgres, and the Python ETL worker. These
+  # are preserved to show where the project started; the TS app replaced them.
   db:
     image: postgres:15-alpine
+    profiles: ["legacy"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -16,6 +33,7 @@ services:
   api:
     build:
       context: ./api
+    profiles: ["legacy"]
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/travel
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
@@ -32,6 +50,7 @@ services:
   worker:
     build:
       context: ./worker
+    profiles: ["legacy"]
     environment:
       DB_HOST: db
       DB_PORT: ${DB_PORT}

@@ -6,6 +6,13 @@ target/
 build/
 .env
 .vscode
+.agent
+
+# Local tooling / per-developer config (never ship to the public repo).
+# .claude/ holds local Claude Code settings incl. a bypass-permissions default
+# and a machine-specific allowlist — must not be committed.
+.claude/
+.venv/
 
 # Worker Data
 worker/data/*.csv
@@ -14,3 +21,7 @@ build.log
 
 # Private Documentation
 infra/deployment_documentation.md
+
+# Stray junk from accidental writes
+*.log
+worker/<style>*
